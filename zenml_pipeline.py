@@ -1,53 +1,43 @@
-from typing import Dict, Tuple
 import bentoml
 from model import SimpleConvNet
 from train import train, test_model, cross_validate
 from zenml.pipelines import pipeline
 from zenml.steps import step
-from torch.nn import Module
 
 NUM_EPOCHS = 1
 K_FOLDS = 2
 
 
-@step()
-def cross_validate_dataset():
+@step
+def cross_validate_dataset() -> dict:
     return cross_validate(epochs=NUM_EPOCHS, k_folds=K_FOLDS)
 
 
 @step
-def train_model() -> Module:
+def train_model() -> SimpleConvNet:
     return train(epochs=NUM_EPOCHS)
 
 
 @step
-def test_model_performance(model: SimpleConvNet):
+def test_model_performance(model: SimpleConvNet) -> dict:
     return test_model(model=model, _test_loader=None)
 
 
 @step
-def _save_model(
-        # cv_results: Dict[int, float],
-        # test_results: Tuple[int, int],
-        model: SimpleConvNet
-) -> None:
-    # training related
-    # correct = float(test_results[0])
-    # total = test_results[1]
+def _save_model(cv_results: dict, test_results: dict, model: SimpleConvNet) -> None:
 
-    # metadata = {
-    #     "acc": float(correct) / total,
-    #     "cv_stats": cv_results,
-    # }
+    metadata = {
+        "acc": float(test_results["correct"]) / test_results["total"],
+        "cv_stats": cv_results,
+    }
 
     # bentoml save model
-
-    model_name = "pytorch_mnist"
+    model_name = "pytorch_mist"
 
     bentoml.pytorch.save(
         model_name,
         model,
-#        metadata=metadata,
+        metadata=metadata,
     )
 
 
@@ -57,8 +47,7 @@ def mnist_pipeline(_cross_validator, _trainer, _test_model, _save_model):
     cv_results = _cross_validator()
     model = _trainer()
     test_results = _test_model(model=model)
-    # _save_model(cv_results, test_results, model)
-    _save_model(model)
+    _save_model(cv_results=cv_results, test_results=test_results, model=model)
 
 
 if __name__ == "__main__":
