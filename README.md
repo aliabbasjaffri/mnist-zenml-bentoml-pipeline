@@ -10,6 +10,7 @@ This project is based on top of [MNIST example project](https://github.com/bento
 - Inspect the file `zenml_pipeline.py`. Observe the different steps the pipeline is composed of.
 - Run the training pipeline that ends up saving the model to registry using
 ```bash
+zenml integration install mlflow
 python3 zenml_pipeline.py
 ```
 - Run the generated model via: 
