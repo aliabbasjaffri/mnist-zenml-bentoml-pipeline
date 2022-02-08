@@ -5,7 +5,6 @@ import numpy as np
 from sklearn.model_selection import KFold
 from torch.nn import CrossEntropyLoss
 from torch.utils.data import ConcatDataset, DataLoader
-from typing import Dict, Tuple
 
 from datasource import get_mnist_dataset, _get_loader, get_loader
 from model import SimpleConvNet
@@ -18,13 +17,9 @@ seed = 42
 random.seed(seed)
 np.random.seed(seed)
 torch.manual_seed(seed)
-torch.cuda.manual_seed(seed)
-torch.cuda.manual_seed_all(seed)
-torch.backends.cudnn.benchmark = False
-torch.backends.cudnn.deterministic = True
 
 
-def cross_validate(epochs=NUM_EPOCHS, k_folds=K_FOLDS) -> Dict[int, float]:
+def cross_validate(epochs=NUM_EPOCHS, k_folds=K_FOLDS) -> dict:
     results = {}
     dataset = get_mnist_dataset(is_train_dataset=True)
 
@@ -55,7 +50,9 @@ def cross_validate(epochs=NUM_EPOCHS, k_folds=K_FOLDS) -> Dict[int, float]:
             train_epoch(model, optimizer, loss_function, train_loader, epoch)
 
         # Evaluation for this fold
-        correct, total = test_model(model, test_loader)
+        result = test_model(model, test_loader)
+        correct = result["correct"]
+        total = result["total"]
         print("Accuracy for fold %d: %d %%" % (fold, 100.0 * correct / total))
         print("--------------------------------")
         results[fold] = 100.0 * (correct / total)
@@ -73,11 +70,13 @@ def cross_validate(epochs=NUM_EPOCHS, k_folds=K_FOLDS) -> Dict[int, float]:
     return results
 
 
-def train_epoch(model, optimizer, loss_function, train_loader, epoch, device="cpu"):
+def train_epoch(
+    model, optimizer, loss_function, train_loader, epoch, _device="cpu"
+) -> None:
     # Mark training flag
     model.train()
     for batch_idx, (inputs, targets) in enumerate(train_loader):
-        inputs, targets = inputs.to(device), targets.to(device)
+        inputs, targets = inputs.to(_device), targets.to(_device)
         optimizer.zero_grad()
         outputs = model(inputs)
         loss = loss_function(outputs, targets)
@@ -95,7 +94,7 @@ def train_epoch(model, optimizer, loss_function, train_loader, epoch, device="cp
             )
 
 
-def train(epochs=NUM_EPOCHS, _device="cpu"):
+def train(epochs=NUM_EPOCHS, _device="cpu") -> SimpleConvNet:
     train_loader = get_loader(is_train_set=True)
 
     model = SimpleConvNet()
@@ -108,7 +107,7 @@ def train(epochs=NUM_EPOCHS, _device="cpu"):
 
 def test_model(
     model: SimpleConvNet, _test_loader: DataLoader = None, _device="cpu"
-) -> Tuple[int, int]:
+) -> dict:
     _correct, _total = 0, 0
 
     if _test_loader is None:
@@ -123,7 +122,7 @@ def test_model(
             _total += targets.size(0)
             _correct += (predicted == targets).sum().item()
 
-    return _correct, _total
+    return {"correct": _correct, "total": _total}
 
 
 if __name__ == "__main__":
@@ -141,11 +140,11 @@ if __name__ == "__main__":
 
     test_loader = get_loader(is_train_set=False)
     trained_model = train(NUM_EPOCHS, device.type)
-    correct, total = test_model(trained_model, test_loader, device.type)
+    test_results = test_model(trained_model, test_loader, device.type)
 
     # training related
     metadata = {
-        "acc": float(correct) / total,
+        "acc": float(test_results["correct"]) / test_results["total"],
         "cv_stats": cv_results,
     }
 
