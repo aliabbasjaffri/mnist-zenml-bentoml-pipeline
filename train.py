@@ -9,8 +9,6 @@ from torch.utils.data import ConcatDataset, DataLoader
 from datasource import get_mnist_dataset, _get_loader, get_loader
 from model import SimpleConvNet
 
-NUM_EPOCHS = 1
-K_FOLDS = 5
 
 # reproducible setup for testing
 seed = 42
@@ -19,7 +17,7 @@ np.random.seed(seed)
 torch.manual_seed(seed)
 
 
-def cross_validate(epochs=NUM_EPOCHS, k_folds=K_FOLDS) -> dict:
+def cross_validate(epochs: int = 1, k_folds: int = 1) -> dict:
     results = {}
     dataset = get_mnist_dataset(is_train_dataset=True)
 
@@ -58,7 +56,7 @@ def cross_validate(epochs=NUM_EPOCHS, k_folds=K_FOLDS) -> dict:
         results[fold] = 100.0 * (correct / total)
 
     # Print fold results
-    print(f"K-FOLD CROSS VALIDATION RESULTS FOR {K_FOLDS} FOLDS")
+    print(f"K-FOLD CROSS VALIDATION RESULTS FOR {k_folds} FOLDS")
     print("--------------------------------")
     _sum = 0.0
     for key, value in results.items():
@@ -94,11 +92,11 @@ def train_epoch(
             )
 
 
-def train(epochs=NUM_EPOCHS, _device="cpu") -> SimpleConvNet:
+def train(epochs: int = 1, learning_rate: float = 1e-4, _device: str = "cpu") -> SimpleConvNet:
     train_loader = get_loader(is_train_set=True)
 
     model = SimpleConvNet()
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     loss_function = CrossEntropyLoss()
     for epoch in range(epochs):
         train_epoch(model, optimizer, loss_function, train_loader, epoch, _device)
@@ -106,7 +104,7 @@ def train(epochs=NUM_EPOCHS, _device="cpu") -> SimpleConvNet:
 
 
 def test_model(
-    model: SimpleConvNet, _test_loader: DataLoader = None, _device="cpu"
+    model: SimpleConvNet, _test_loader: DataLoader = None, _device: str = "cpu"
 ) -> dict:
     _correct, _total = 0, 0
 
@@ -133,13 +131,10 @@ if __name__ == "__main__":
 
     device = torch.device("cuda" if use_cuda else "cpu")
 
-    if K_FOLDS > 1:
-        cv_results = cross_validate(NUM_EPOCHS, K_FOLDS)
-    else:
-        cv_results = {}
+    cv_results = cross_validate()
 
     test_loader = get_loader(is_train_set=False)
-    trained_model = train(NUM_EPOCHS, device.type)
+    trained_model = train(epochs=1, learning_rate=0.0001, _device=device.type)
     test_results = test_model(trained_model, test_loader, device.type)
 
     # training related
