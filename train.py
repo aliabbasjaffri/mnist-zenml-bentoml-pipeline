@@ -5,7 +5,7 @@ import numpy as np
 from sklearn.model_selection import KFold
 from torch.nn import CrossEntropyLoss
 from torch.utils.data import ConcatDataset, DataLoader
-
+from mlflow import autolog
 from datasource import get_mnist_dataset, _get_loader, get_loader
 from model import SimpleConvNet
 
@@ -17,7 +17,8 @@ np.random.seed(seed)
 torch.manual_seed(seed)
 
 
-def cross_validate(epochs: int = 1, k_folds: int = 1) -> dict:
+def cross_validate(epochs: int = 1, k_folds: int = 2) -> dict:
+    autolog()
     results = {}
     dataset = get_mnist_dataset(is_train_dataset=True)
 
@@ -71,6 +72,7 @@ def cross_validate(epochs: int = 1, k_folds: int = 1) -> dict:
 def train_epoch(
     model, optimizer, loss_function, train_loader, epoch, _device="cpu"
 ) -> None:
+    autolog()
     # Mark training flag
     model.train()
     for batch_idx, (inputs, targets) in enumerate(train_loader):
@@ -93,6 +95,7 @@ def train_epoch(
 
 
 def train(epochs: int = 1, learning_rate: float = 1e-4, _device: str = "cpu") -> SimpleConvNet:
+    autolog()
     train_loader = get_loader(is_train_set=True)
 
     model = SimpleConvNet()
@@ -106,6 +109,7 @@ def train(epochs: int = 1, learning_rate: float = 1e-4, _device: str = "cpu") ->
 def test_model(
     model: SimpleConvNet, _test_loader: DataLoader = None, _device: str = "cpu"
 ) -> dict:
+    autolog()
     _correct, _total = 0, 0
 
     if _test_loader is None:
