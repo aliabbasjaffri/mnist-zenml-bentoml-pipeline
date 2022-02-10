@@ -34,10 +34,8 @@ def test_model_performance(model: SimpleConvNet) -> dict:
     return test_model(model=model, _test_loader=None)
 
 
-@enable_mlflow
 @step
 def _save_model(cv_results: dict, test_results: dict, model: SimpleConvNet) -> None:
-
     metadata = {
         "acc": float(test_results["correct"]) / test_results["total"],
         "cv_stats": cv_results,
@@ -64,21 +62,24 @@ def mnist_pipeline(_cross_validator, _trainer, _test_model, _save_model):
 
 if __name__ == "__main__":
     # Run the pipeline
-    p1 = mnist_pipeline(
-        _cross_validator=cross_validate_dataset(config=TrainerConfig(epochs=1, k_folds=2)),
-        _trainer=train_model(config=TrainerConfig(epochs=1, lr=0.0003)),
-        _test_model=test_model_performance(),
-        _save_model=_save_model(),
-    )
-    p1.run()
 
-    p2 = mnist_pipeline(
-        _cross_validator=cross_validate_dataset(config=TrainerConfig(epochs=5, k_folds=5)),
-        _trainer=train_model(config=TrainerConfig(epochs=5, lr=0.0004)),
-        _test_model=test_model_performance(),
-        _save_model=_save_model(),
-    )
-    p2.run()
+    configs = [
+        {"epochs": 1, "k_folds": 2, "lr": 0.0003},
+        {"epochs": 2, "k_folds": 2, "lr": 0.0004},
+    ]
+
+    for config in configs:
+        pipeline_def = mnist_pipeline(
+            _cross_validator=cross_validate_dataset(
+                config=TrainerConfig(epochs=config["epochs"], k_folds=config["k_folds"])
+            ),
+            _trainer=train_model(
+                config=TrainerConfig(epochs=config["epochs"], lr=config["lr"])
+            ),
+            _test_model=test_model_performance(),
+            _save_model=_save_model(),
+        )
+        pipeline_def.run()
 
     mlflow_env = Environment()[MLFLOW_ENVIRONMENT_NAME]
     print(

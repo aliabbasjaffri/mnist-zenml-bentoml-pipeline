@@ -1,11 +1,12 @@
 import random
+
+import mlflow.pytorch
 from bentoml.pytorch import save
 import torch
 import numpy as np
 from sklearn.model_selection import KFold
 from torch.nn import CrossEntropyLoss
 from torch.utils.data import ConcatDataset, DataLoader
-
 from datasource import get_mnist_dataset, _get_loader, get_loader
 from model import SimpleConvNet
 
@@ -62,7 +63,7 @@ def cross_validate(epochs: int = 1, k_folds: int = 1) -> dict:
     for key, value in results.items():
         print(f"Fold {key}: {value} %")
         _sum += value
-
+    mlflow.log_metric("cross_val_accuracy", _sum / len(results.items()))
     print(f"Average: {_sum / len(results.items())} %")
 
     return results
@@ -92,12 +93,15 @@ def train_epoch(
             )
 
 
-def train(epochs: int = 1, learning_rate: float = 1e-4, _device: str = "cpu") -> SimpleConvNet:
+def train(
+    epochs: int = 1, learning_rate: float = 1e-4, _device: str = "cpu"
+) -> SimpleConvNet:
     train_loader = get_loader(is_train_set=True)
 
     model = SimpleConvNet()
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     loss_function = CrossEntropyLoss()
+    mlflow.autolog()
     for epoch in range(epochs):
         train_epoch(model, optimizer, loss_function, train_loader, epoch, _device)
     return model
@@ -119,6 +123,8 @@ def test_model(
             _, predicted = torch.max(outputs.data, 1)
             _total += targets.size(0)
             _correct += (predicted == targets).sum().item()
+
+    mlflow.log_metric("val_accuracy", (float(_correct) / _total) * 100)
 
     return {"correct": _correct, "total": _total}
 
