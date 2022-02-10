@@ -19,7 +19,9 @@ class TrainerConfig(BaseStepConfig):
 @enable_mlflow
 @step
 def cross_validate_dataset(config: TrainerConfig) -> dict:
-    return cross_validate(epochs=config.epochs, k_folds=config.k_folds)
+    return cross_validate(
+        epochs=config.epochs, k_folds=config.k_folds, learning_rate=config.lr
+    )
 
 
 @enable_mlflow
@@ -51,7 +53,7 @@ def _save_model(cv_results: dict, test_results: dict, model: SimpleConvNet) -> N
     )
 
 
-@pipeline
+@pipeline(enable_cache=False)
 def mnist_pipeline(_cross_validator, _trainer, _test_model, _save_model):
     """Links all the steps together in a pipeline"""
     cv_results = _cross_validator()
@@ -71,7 +73,9 @@ if __name__ == "__main__":
     for config in configs:
         pipeline_def = mnist_pipeline(
             _cross_validator=cross_validate_dataset(
-                config=TrainerConfig(epochs=config["epochs"], k_folds=config["k_folds"])
+                config=TrainerConfig(
+                    epochs=config["epochs"], k_folds=config["k_folds"], lr=config["lr"]
+                )
             ),
             _trainer=train_model(
                 config=TrainerConfig(epochs=config["epochs"], lr=config["lr"])

@@ -1,6 +1,5 @@
 import random
-
-import mlflow.pytorch
+import mlflow
 from bentoml.pytorch import save
 import torch
 import numpy as np
@@ -18,8 +17,13 @@ np.random.seed(seed)
 torch.manual_seed(seed)
 
 
-def cross_validate(epochs: int = 1, k_folds: int = 1) -> dict:
+def cross_validate(
+    epochs: int = 1, k_folds: int = 1, learning_rate: float = 1e-4
+) -> dict:
     results = {}
+    mlflow.log_params({"epochs": epochs})
+    mlflow.log_params({"k_folds": k_folds})
+    mlflow.log_params({"learning_rate": learning_rate})
     dataset = get_mnist_dataset(is_train_dataset=True)
 
     # Define the K-fold Cross Validator
@@ -43,7 +47,7 @@ def cross_validate(epochs: int = 1, k_folds: int = 1) -> dict:
 
         # Train this fold
         model = SimpleConvNet()
-        optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
         loss_function = CrossEntropyLoss()
         for epoch in range(epochs):
             train_epoch(model, optimizer, loss_function, train_loader, epoch)
@@ -101,9 +105,10 @@ def train(
     model = SimpleConvNet()
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     loss_function = CrossEntropyLoss()
-    mlflow.autolog()
     for epoch in range(epochs):
         train_epoch(model, optimizer, loss_function, train_loader, epoch, _device)
+
+    mlflow.pytorch.log_model(model, "model")
     return model
 
 
